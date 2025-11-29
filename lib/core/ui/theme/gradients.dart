@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'colors.dart';
 
 /// Sistema de Gradientes de Marca
-/// Basado en el branding azul: #1605AC (azul fuerte principal), #1976D2 (azul secundario), #0D47A1 (azul profundo)
+/// Basado en el branding de Cupazo: Amarillo principal y negro
 class AppGradients {
   AppGradients._();
 
@@ -10,20 +10,24 @@ class AppGradients {
   // GRADIENTES PRINCIPALES - Para fondos y superficies hero
   // ══════════════════════════════════════════════════════════════════════════
 
-  /// Gradiente primario vibrante: Azul fuerte → Azul secundario
+  /// Gradiente primario vibrante: Amarillo principal → Amarillo secundario
   /// Uso: Splash, welcome hero, CTAs principales
   static const LinearGradient flameHero = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [AppColors.primaryBlue, AppColors.secondaryBlue],
+    colors: [AppColors.primaryYellow, AppColors.secondaryYellow],
   );
 
-  /// Gradiente energético: Azul profundo → Azul fuerte → Azul secundario
+  /// Gradiente energético: Negro profundo → Amarillo principal → Amarillo secundario
   /// Uso: Backgrounds completos, promo banners
   static const LinearGradient energyFlow = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [AppColors.deepBlue, AppColors.primaryBlue, AppColors.secondaryBlue],
+    colors: [
+      AppColors.deepBlack,
+      AppColors.primaryYellow,
+      AppColors.secondaryYellow,
+    ],
     stops: [0.0, 0.5, 1.0],
   );
 
@@ -32,10 +36,6 @@ class AppGradients {
   static const LinearGradient softAmbient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0xFFE3F2FD), // Azul claro suave
-      Color(0xFFE1F5FE), // Azul cielo claro
-      Color(0xFFF0F8FF), // Azul alice claro
-    ],
+    colors: [AppColors.surface, AppColors.surfaceMuted, AppColors.surfaceHint],
   );
 }

@@ -442,7 +442,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 0,
                                       height: 1.4,
-                                      color: AppColors.primaryBlue,
+                                      color: AppColors.primaryYellow,
                                     ),
                                   ),
                                 ),

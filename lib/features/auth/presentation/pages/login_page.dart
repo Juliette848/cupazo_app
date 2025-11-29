@@ -5,7 +5,6 @@ import '../../../../shared/constants/routes.dart';
 import '../../../../core/ui/widgets/widgets.dart';
 import '../../../../core/ui/theme/colors.dart';
 import '../../../../core/ui/theme/gradients.dart';
-import '../../../../core/ui/theme/typography.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,6 +16,10 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   final _auth = InjectionContainer.authService;
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
   bool _isLoading = false;
   late AnimationController _controller;
 
@@ -31,20 +34,63 @@ class _LoginPageState extends State<LoginPage>
 
   @override
   void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _loginWithEmail() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      await _controller.forward();
-      await _auth.loginWithGoogle();
+      final response = await _auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      debugPrint('Login exitoso, navegando a home...');
+      debugPrint('Usuario: ${response.user?.email}');
+
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.home);
+        debugPrint('Navegación completada a: ${AppRoutes.home}');
       }
     } catch (e) {
       debugPrint('Error login: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al iniciar sesión: ${e.toString()}'),
+            backgroundColor: AppColors.accentDanger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      await _controller.forward();
+      final response = await _auth.loginWithGoogle();
+
+      debugPrint('Login con Google exitoso, navegando a home...');
+      debugPrint('Usuario: ${response.user?.email}');
+
+      if (mounted) {
+        // Esperar un frame para asegurar que el estado se actualice
+        await Future.delayed(const Duration(milliseconds: 100));
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        debugPrint('Navegación completada a: ${AppRoutes.home}');
+      }
+    } catch (e) {
+      debugPrint('Error login con Google: $e');
       _controller.reverse();
       if (mounted) {
         ScaffoldMessenger.of(
@@ -62,8 +108,15 @@ class _LoginPageState extends State<LoginPage>
     final size = MediaQuery.of(context).size;
     final double baseHeaderHeight = (size.height * 0.30).clamp(220.0, 400.0);
 
+    // Si el usuario ya está logueado, redirigir a home automáticamente
     if (user != null) {
-      return _buildLoggedInView(user);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.home);
+        }
+      });
+      // Mostrar un loading mientras redirige
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return AppScaffold(
@@ -76,7 +129,7 @@ class _LoginPageState extends State<LoginPage>
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFFFFFFFF), Color(0xFFF2F4F7)],
+                colors: [AppColors.surface, AppColors.surfaceMuted],
               ),
             ),
           ),
@@ -134,7 +187,9 @@ class _LoginPageState extends State<LoginPage>
                             gradient: AppGradients.flameHero,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primaryBlue.withOpacity(0.25),
+                                color: AppColors.primaryYellow.withOpacity(
+                                  0.25,
+                                ),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
@@ -206,174 +261,172 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  Widget _buildLoggedInView(dynamic user) {
-    return AppScaffold(
-      showAppBar: true,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (user.userMetadata?['avatar_url'] != null)
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppGradients.flameHero,
-                ),
-                child: CircleAvatar(
-                  backgroundImage: NetworkImage(
-                    user.userMetadata!['avatar_url'] as String,
-                  ),
-                  radius: 40,
-                ),
-              ),
-            const SizedBox(height: 16),
-            Text(
-              'Hola, ${user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? 'usuario'}',
-              style: AppTypography.title,
-            ),
-            const SizedBox(height: 8),
-            Text(user.email ?? '', style: AppTypography.body),
-            const SizedBox(height: 32),
-            PrimaryButton(
-              text: 'Cerrar sesión',
-              onPressed: () async {
-                setState(() => _isLoading = true);
-                try {
-                  await _auth.logout();
-                  setState(() {});
-                } catch (e) {
-                  debugPrint('Error logout: $e');
-                } finally {
-                  setState(() => _isLoading = false);
-                }
-              },
-              isLoading: _isLoading,
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.home),
-              child: const Text('Ir al Inicio'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildLoginCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          'Bienvenido !!',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'Plus Jakarta Sans',
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-            color: AppColors.ink,
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            'Bienvenido !!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Plus Jakarta Sans',
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+              color: AppColors.ink,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Inicia sesión para continuar',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'Plus Jakarta Sans',
-            fontSize: 16,
-            color: AppColors.inkMuted,
-            height: 1.5,
+          const SizedBox(height: 8),
+          Text(
+            'Inicia sesión para continuar',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Plus Jakarta Sans',
+              fontSize: 16,
+              color: AppColors.inkMuted,
+              height: 1.5,
+            ),
           ),
-        ),
-        const SizedBox(height: 40),
+          const SizedBox(height: 40),
 
-        // Login Button with Glow
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryBlue.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+          // Email field
+          AppTextField(
+            label: 'Correo electrónico',
+            hint: 'tu@email.com',
+            leadingIcon: Icons.email_outlined,
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'El correo es requerido';
+              }
+              final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+              if (!emailRegex.hasMatch(value)) {
+                return 'Correo inválido';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Password field
+          AppTextField(
+            label: 'Contraseña',
+            hint: '••••••••',
+            leadingIcon: Icons.lock_outline,
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                color: AppColors.inkMuted,
+                size: 24,
               ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'La contraseña es requerida';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 32),
+
+          // Login Button with Glow
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryYellow.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: PrimaryButton(
+              text: 'Iniciar sesión',
+              onPressed: _loginWithEmail,
+              isLoading: _isLoading,
+              fullWidth: true,
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // Divider
+          Row(
+            children: [
+              Expanded(child: Container(height: 1, color: AppColors.line)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'O continúa con',
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.inkMuted,
+                  ),
+                ),
+              ),
+              Expanded(child: Container(height: 1, color: AppColors.line)),
             ],
           ),
-          child: PrimaryButton(
-            text: 'Iniciar sesión',
-            onPressed: _login,
-            isLoading: _isLoading,
-            fullWidth: true,
-          ),
-        ),
+          const SizedBox(height: 32),
 
-        const SizedBox(height: 32),
-
-        // Divider
-        Row(
-          children: [
-            Expanded(child: Container(height: 1, color: AppColors.line)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'O continúa con',
-                style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkMuted,
-                ),
+          // Social Button - Google only, centered
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: _SocialButton(
+                assetPath: 'assets/iconos/google.svg',
+                label: 'Google',
+                onPressed: _loginWithGoogle,
               ),
             ),
-            Expanded(child: Container(height: 1, color: AppColors.line)),
-          ],
-        ),
-        const SizedBox(height: 32),
-
-        // Social Button - Google only, centered
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: _SocialButton(
-              assetPath: 'assets/iconos/google.svg',
-              label: 'Google',
-              onPressed: _login,
-            ),
           ),
-        ),
-        const SizedBox(height: 32),
+          const SizedBox(height: 32),
 
-        // Register Link
-        Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '¿No tienes cuenta? ',
-                style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontSize: 15,
-                  color: AppColors.inkMuted,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, AppRoutes.signUp),
-                child: Text(
-                  'Regístrate',
+          // Register Link
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '¿No tienes cuenta? ',
                   style: TextStyle(
                     fontFamily: 'Plus Jakarta Sans',
                     fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryBlue,
+                    color: AppColors.inkMuted,
                   ),
                 ),
-              ),
-            ],
+                GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.register),
+                  child: Text(
+                    'Regístrate',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryYellow,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -431,34 +484,31 @@ class _SocialButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.ink,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: AppColors.line.withOpacity(0.5),
-            width: 1,
+      style:
+          ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: AppColors.ink,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: AppColors.line.withOpacity(0.5),
+                width: 1,
+              ),
+            ),
+            shadowColor: Colors.black.withOpacity(0.1),
+          ).copyWith(
+            elevation: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.pressed)) return 0;
+              return 2;
+            }),
           ),
-        ),
-        shadowColor: Colors.black.withOpacity(0.1),
-      ).copyWith(
-        elevation: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return 0;
-          return 2;
-        }),
-      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset(
-            assetPath,
-            width: 22,
-            height: 22,
-          ),
+          SvgPicture.asset(assetPath, width: 22, height: 22),
           const SizedBox(width: 10),
           Text(
             label,
@@ -473,4 +523,3 @@ class _SocialButton extends StatelessWidget {
     );
   }
 }
-

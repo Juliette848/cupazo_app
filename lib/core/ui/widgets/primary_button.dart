@@ -29,7 +29,7 @@ class PrimaryButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accentPrimary,
-          foregroundColor: AppColors.pureWhite,
+          foregroundColor: AppColors.onPrimary,
           disabledBackgroundColor: AppColors.inkSoft,
           disabledForegroundColor: AppColors.surfaceMuted,
           shape: RoundedRectangleBorder(
@@ -45,14 +45,14 @@ class PrimaryButton extends StatelessWidget {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.pureWhite,
+                    AppColors.onPrimary,
                   ),
                 ),
               )
             : Text(
                 text,
                 style: AppTypography.button.copyWith(
-                  color: AppColors.pureWhite,
+                  color: AppColors.onPrimary,
                   letterSpacing: 0.2,
                 ),
               ),

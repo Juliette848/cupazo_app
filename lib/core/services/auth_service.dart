@@ -12,7 +12,6 @@ class AuthService {
 
   final SupabaseClient _supabase = Supabase.instance.client;
 
-
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
     serverClientId: Env.googleWebClientId,
   );
@@ -60,14 +59,58 @@ class AuthService {
     }
   }
 
+  /// Login con email y contraseña
+  Future<AuthResponse> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      AppLogger.info('Iniciando sesión con email y contraseña...');
+
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      AppLogger.info('Autenticación exitosa');
+      return response;
+    } catch (e) {
+      AppLogger.error('Error en login con email/password', e);
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     try {
       AppLogger.info('Cerrando sesión...');
       await _googleSignIn.signOut(); // Sign out from Google
-      await _supabase.auth.signOut(); 
+      await _supabase.auth.signOut();
       AppLogger.info('Sesión cerrada correctamente');
     } catch (e) {
       AppLogger.error('Error al cerrar sesión', e);
+      rethrow;
+    }
+  }
+
+  /// Registro con email y contraseña
+  Future<AuthResponse> signUp({
+    required String email,
+    required String password,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      AppLogger.info('Registrando usuario con email...');
+
+      final response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: data,
+      );
+
+      AppLogger.info('Registro exitoso');
+      return response;
+    } catch (e) {
+      AppLogger.error('Error en registro', e);
       rethrow;
     }
   }
