@@ -121,21 +121,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     }
   }
 
-  String _mapStatus(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Pendiente';
-      case 'paid':
-        return 'Pagado';
-      case 'shipped':
-        return 'En Camino';
-      case 'delivered':
-        return 'Entregado';
-      default:
-        return status;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
