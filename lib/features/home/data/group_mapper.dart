@@ -17,8 +17,12 @@ class GroupMapper {
     if (members.isNotEmpty) {
       // Ordenar miembros por fecha de unión para encontrar al primero (creador)
       members.sort((a, b) {
-        final dateA = DateTime.parse(a['joined_at']);
-        final dateB = DateTime.parse(b['joined_at']);
+        final dateA = a['joined_at'] != null
+            ? DateTime.parse(a['joined_at'])
+            : DateTime.now();
+        final dateB = b['joined_at'] != null
+            ? DateTime.parse(b['joined_at'])
+            : DateTime.now();
         return dateA.compareTo(dateB);
       });
 
@@ -66,7 +70,9 @@ class GroupMapper {
       currentMembers: members.length,
       requiredMembers: json['max_group_size'] ?? 2,
       groupPrice: groupPrice,
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
       isCurrentUserMember: isCurrentUserMember,
     );
   }

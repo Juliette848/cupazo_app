@@ -66,7 +66,7 @@ class MatchGroupRepository {
     try {
       final response = await _supabase
           .from('match_groups')
-          .select('*, match_group_members(*, users(*))')
+          .select('*, match_group_members(*)') // Removed users(*) to avoid issues with missing public.users
           .eq('deal_id', dealId)
           .eq('status', 'open') // Only open groups
           .order('created_at', ascending: false);

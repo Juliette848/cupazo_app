@@ -551,12 +551,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           else if (_activeGroups.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: Text(
-                'No hay grupos activos. ¡Sé el primero en crear uno!',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontStyle: FontStyle.italic,
-                ),
+              child: Column(
+                children: [
+                  Text(
+                    'No hay grupos activos. ¡Sé el primero en crear uno!',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _loadGroups,
+                    child: Text(
+                      'Actualizar lista',
+                      style: TextStyle(color: AppColors.primaryYellow),
+                    ),
+                  ),
+                ],
               ),
             )
           else
