@@ -18,6 +18,7 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isFavorite = false;
   String? _selectedSize;
+  int _quantity = 1; // Cantidad seleccionada para grupo
   final List<GroupPurchase> _activeGroups = [];
 
   @override
@@ -351,7 +352,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.primaryYellow,
+        color: AppColors.deepBlack, // Cambiado a Negro
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -395,8 +396,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primaryYellow.withOpacity(0.3),
+              color: Colors.white.withOpacity(
+                0.1,
+              ), // Ajustado para fondo oscuro
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
             child: Column(
               children: [
@@ -409,7 +413,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         fontFamily: 'Plus Jakarta Sans',
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color:
+                            AppColors.primaryYellow, // Amarillo para destacar
                       ),
                     ),
                     Text(
@@ -418,7 +423,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         fontFamily: 'Plus Jakarta Sans',
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color:
+                            AppColors.primaryYellow, // Amarillo para destacar
                       ),
                     ),
                   ],
@@ -429,7 +435,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     Icon(
                       Icons.group,
                       size: 16,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withOpacity(0.7),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -437,7 +443,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       style: TextStyle(
                         fontFamily: 'Plus Jakarta Sans',
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -464,21 +470,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           // Start My Own Group Button
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: ElevatedButton.icon(
+              // Cambiado a ElevatedButton
               onPressed: _startNewGroup,
-              icon: Icon(Icons.add_circle_outline, color: Colors.white),
+              icon: Icon(
+                Icons.add_circle_outline,
+                color: AppColors.deepBlack,
+              ), // Icono negro
               label: Text(
                 'Iniciar mi propio grupo',
                 style: TextStyle(
                   fontFamily: 'Plus Jakarta Sans',
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.deepBlack, // Texto negro
                 ),
               ),
-              style: OutlinedButton.styleFrom(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryYellow, // Fondo amarillo
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: Colors.white, width: 2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -551,8 +561,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ElevatedButton(
             onPressed: group.isComplete ? null : () => _joinGroup(group),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.deepBlack,
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.primaryYellow, // Fondo Amarillo
+              foregroundColor: AppColors.deepBlack, // Texto Negro
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -635,50 +645,88 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            // Group Purchase Button
+            // Group Purchase Button with Quantity Selector
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Iniciando compra en grupo: S/ ${widget.product.groupPrice3.toStringAsFixed(2)} c/u',
-                      ),
-                      backgroundColor: AppColors.primaryYellow,
-                    ),
-                  );
-                },
-                icon: Icon(Icons.group, color: Colors.white),
-                label: Column(
-                  mainAxisSize: MainAxisSize.min,
+              child: Container(
+                height: 56, // Altura fija para igualar al otro botón
+                decoration: BoxDecoration(
+                  color: AppColors.primaryYellow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Iniciar Grupo',
-                      style: TextStyle(
-                        fontFamily: 'Plus Jakarta Sans',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    // Decrement Button
+                    IconButton(
+                      onPressed: () {
+                        if (_quantity > 1) {
+                          setState(() {
+                            _quantity--;
+                          });
+                        }
+                      },
+                      icon: Icon(Icons.remove, color: AppColors.deepBlack),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'S/ ${widget.product.groupPrice3.toStringAsFixed(2)} c/u',
-                      style: TextStyle(
-                        fontFamily: 'Plus Jakarta Sans',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+
+                    // Action Button (Center)
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Iniciando compra en grupo de $_quantity unidades: S/ ${(widget.product.groupPrice3 * _quantity).toStringAsFixed(2)}',
+                              ),
+                              backgroundColor: AppColors.deepBlack,
+                            ),
+                          );
+                        },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Iniciar ($_quantity)',
+                              style: TextStyle(
+                                fontFamily: 'Plus Jakarta Sans',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.deepBlack,
+                              ),
+                            ),
+                            Text(
+                              'S/ ${(widget.product.groupPrice3 * _quantity).toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontFamily: 'Plus Jakarta Sans',
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.deepBlack,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Increment Button
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _quantity++;
+                        });
+                      },
+                      icon: Icon(Icons.add, color: AppColors.deepBlack),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
                       ),
                     ),
                   ],
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.deepBlack,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
               ),
             ),

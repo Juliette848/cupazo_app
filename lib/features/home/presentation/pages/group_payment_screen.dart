@@ -24,22 +24,19 @@ class GroupPaymentScreen extends StatefulWidget {
 class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
   String _selectedPaymentMethod = 'card'; // 'card', 'yape', 'plin'
   String? _selectedCardId;
+  bool _isAddingNewCard = false;
   String _selectedSubMethod = 'push'; // 'push' o 'qr' para Yape/Plin
   final TextEditingController _phoneController = TextEditingController();
 
+  // Controllers for new card
+  final TextEditingController _cardNumberController = TextEditingController();
+  final TextEditingController _expiryController = TextEditingController();
+  final TextEditingController _cvvController = TextEditingController();
+  final TextEditingController _cardHolderController = TextEditingController();
+
   final List<Map<String, dynamic>> _savedCards = [
-    {
-      'id': '1',
-      'type': 'visa',
-      'last4': '4567',
-      'expiry': '12/25',
-    },
-    {
-      'id': '2',
-      'type': 'mastercard',
-      'last4': '8901',
-      'expiry': '08/26',
-    },
+    {'id': '1', 'type': 'visa', 'last4': '4567', 'expiry': '12/25'},
+    {'id': '2', 'type': 'mastercard', 'last4': '8901', 'expiry': '08/26'},
   ];
 
   @override
@@ -54,6 +51,10 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
   @override
   void dispose() {
     _phoneController.dispose();
+    _cardNumberController.dispose();
+    _expiryController.dispose();
+    _cvvController.dispose();
+    _cardHolderController.dispose();
     super.dispose();
   }
 
@@ -209,11 +210,7 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.savings,
-                  color: AppColors.statusSuccess,
-                  size: 20,
-                ),
+                Icon(Icons.savings, color: AppColors.statusSuccess, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Ahorro por compra en grupo: S/ ${_savings.toStringAsFixed(2)}',
@@ -335,13 +332,18 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
 
         // Saved Cards (only show if card is selected)
         if (_selectedPaymentMethod == 'card') ...[
-          ..._savedCards.map((card) => _buildSavedCard(card)),
-          const SizedBox(height: 12),
-          _buildAddNewCardButton(),
+          if (!_isAddingNewCard) ...[
+            ..._savedCards.map((card) => _buildSavedCard(card)),
+            const SizedBox(height: 12),
+            _buildAddNewCardButton(),
+          ] else ...[
+            _buildNewCardForm(),
+          ],
         ],
 
         // Yape or Plin options
-        if (_selectedPaymentMethod == 'yape' || _selectedPaymentMethod == 'plin') ...[
+        if (_selectedPaymentMethod == 'yape' ||
+            _selectedPaymentMethod == 'plin') ...[
           _buildDigitalWalletOptions(),
         ],
       ],
@@ -385,11 +387,7 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : color,
-              size: 24,
-            ),
+            Icon(icon, color: isSelected ? Colors.white : color, size: 24),
             const SizedBox(height: 4),
             Text(
               label,
@@ -408,7 +406,9 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
 
   Widget _buildSavedCard(Map<String, dynamic> card) {
     final isSelected = _selectedCardId == card['id'];
-    final cardColor = card['type'] == 'visa' ? Colors.blue[200] : Colors.orange[200];
+    final cardColor = card['type'] == 'visa'
+        ? Colors.blue[200]
+        : Colors.orange[200];
 
     return GestureDetector(
       onTap: () {
@@ -438,11 +438,7 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
                 color: cardColor,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Icon(
-                Icons.credit_card,
-                color: Colors.white,
-                size: 20,
-              ),
+              child: Icon(Icons.credit_card, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -483,37 +479,186 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
   }
 
   Widget _buildAddNewCardButton() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isAddingNewCard = true;
+          _selectedCardId = null;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1.5,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_circle_outline, color: AppColors.inkSoft, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Agregar Nueva Tarjeta',
+              style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.inkSoft,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewCardForm() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey[300]!,
-          width: 1.5,
-          style: BorderStyle.solid,
-        ),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.add_circle_outline,
-            color: AppColors.inkSoft,
-            size: 20,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Nueva Tarjeta',
+                style: TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.ink,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isAddingNewCard = false;
+                    if (_savedCards.isNotEmpty) {
+                      _selectedCardId = _savedCards[0]['id'] as String;
+                    }
+                  });
+                },
+                child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            'Agregar Nueva Tarjeta',
-            style: TextStyle(
-              fontFamily: 'Plus Jakarta Sans',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.inkSoft,
-            ),
+          const SizedBox(height: 16),
+          // Card Number
+          _buildTextField(
+            controller: _cardNumberController,
+            label: 'Número de Tarjeta',
+            hint: '0000 0000 0000 0000',
+            keyboardType: TextInputType.number,
+            icon: Icons.credit_card,
+          ),
+          const SizedBox(height: 12),
+          // Expiry and CVV
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  controller: _expiryController,
+                  label: 'Vencimiento',
+                  hint: 'MM/AA',
+                  keyboardType: TextInputType.datetime,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTextField(
+                  controller: _cvvController,
+                  label: 'CVV',
+                  hint: '123',
+                  keyboardType: TextInputType.number,
+                  isPassword: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Card Holder Name
+          _buildTextField(
+            controller: _cardHolderController,
+            label: 'Nombre del Titular',
+            hint: 'Como aparece en la tarjeta',
+            keyboardType: TextInputType.name,
+            icon: Icons.person_outline,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+    IconData? icon,
+    bool isPassword = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Plus Jakarta Sans',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.ink,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          obscureText: isPassword,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              fontFamily: 'Plus Jakarta Sans',
+              fontSize: 14,
+              color: Colors.grey[400],
+            ),
+            prefixIcon: icon != null
+                ? Icon(icon, color: Colors.grey[500], size: 20)
+                : null,
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: AppColors.primaryYellow,
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -563,49 +708,86 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Icon(
-                        Icons.phone_android,
-                        color: _selectedSubMethod == 'push'
-                            ? primaryColor
-                            : AppColors.inkSoft,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Notificación Push',
-                              style: TextStyle(
-                                fontFamily: 'Plus Jakarta Sans',
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: _selectedSubMethod == 'push'
-                                    ? primaryColor
-                                    : AppColors.ink,
-                              ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.phone_android,
+                            color: _selectedSubMethod == 'push'
+                                ? primaryColor
+                                : AppColors.inkSoft,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Notificación Push',
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: _selectedSubMethod == 'push'
+                                        ? primaryColor
+                                        : AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Aprueba desde tu app',
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontSize: 12,
+                                    color: primaryColor.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Aprueba desde tu app',
-                              style: TextStyle(
-                                fontFamily: 'Plus Jakarta Sans',
+                          ),
+                          if (_selectedSubMethod == 'push')
+                            Icon(
+                              Icons.check_circle,
+                              color: AppColors.statusSuccess,
+                              size: 24,
+                            ),
+                        ],
+                      ),
+                      if (_selectedSubMethod == 'push') ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '🔔 Notificación enviada a tu celular',
+                                  ),
+                                  backgroundColor: primaryColor,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.notifications_active,
+                              size: 18,
+                            ),
+                            label: const Text('Enviar Notificación'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              textStyle: const TextStyle(
                                 fontSize: 12,
-                                color: primaryColor.withOpacity(0.7),
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                      if (_selectedSubMethod == 'push')
-                        Icon(
-                          Icons.check_circle,
-                          color: AppColors.statusSuccess,
-                          size: 24,
-                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -626,43 +808,74 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Icon(
-                        Icons.qr_code,
-                        color: _selectedSubMethod == 'qr'
-                            ? primaryColor
-                            : AppColors.inkSoft,
-                        size: 24,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.qr_code,
+                            color: _selectedSubMethod == 'qr'
+                                ? primaryColor
+                                : AppColors.inkSoft,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Código QR',
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: _selectedSubMethod == 'qr'
+                                        ? primaryColor
+                                        : AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Escanea para pagar',
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontSize: 12,
+                                    color: primaryColor.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Código QR',
-                              style: TextStyle(
-                                fontFamily: 'Plus Jakarta Sans',
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: _selectedSubMethod == 'qr'
-                                    ? primaryColor
-                                    : AppColors.ink,
-                              ),
+                      if (_selectedSubMethod == 'qr') ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: 180,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.qr_code_2,
+                              size: 150,
+                              color: Colors.black,
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Escanea para pagar',
-                              style: TextStyle(
-                                fontFamily: 'Plus Jakarta Sans',
-                                fontSize: 12,
-                                color: primaryColor.withOpacity(0.7),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Escanea con tu app de $accountName',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -711,10 +924,7 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: primaryColor,
-                width: 2,
-              ),
+              borderSide: BorderSide(color: primaryColor, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -791,17 +1001,34 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
           child: ElevatedButton(
             onPressed: () {
               // Validar que se haya seleccionado un método de pago
-              if (_selectedPaymentMethod == 'card' && _selectedCardId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Por favor selecciona una tarjeta'),
-                    backgroundColor: AppColors.statusError,
-                  ),
-                );
-                return;
+              if (_selectedPaymentMethod == 'card') {
+                if (!_isAddingNewCard && _selectedCardId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Por favor selecciona una tarjeta'),
+                      backgroundColor: AppColors.statusError,
+                    ),
+                  );
+                  return;
+                } else if (_isAddingNewCard) {
+                  if (_cardNumberController.text.isEmpty ||
+                      _expiryController.text.isEmpty ||
+                      _cvvController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Por favor completa los datos de la tarjeta',
+                        ),
+                        backgroundColor: AppColors.statusError,
+                      ),
+                    );
+                    return;
+                  }
+                }
               }
 
-              if ((_selectedPaymentMethod == 'yape' || _selectedPaymentMethod == 'plin') &&
+              if ((_selectedPaymentMethod == 'yape' ||
+                      _selectedPaymentMethod == 'plin') &&
                   _phoneController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -814,9 +1041,17 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
 
               // Navegar a la pantalla de seguimiento de pedido
               String paymentMethodText;
-              if (_selectedPaymentMethod == 'card' && _selectedCardId != null) {
-                final card = _savedCards.firstWhere((c) => c['id'] == _selectedCardId);
-                paymentMethodText = 'Tarjeta ${card['type']?.toString().toUpperCase()} terminada en ${card['last4']}';
+              if (_selectedPaymentMethod == 'card') {
+                if (_isAddingNewCard) {
+                  paymentMethodText =
+                      'Tarjeta terminada en ${_cardNumberController.text.length > 4 ? _cardNumberController.text.substring(_cardNumberController.text.length - 4) : '****'}';
+                } else {
+                  final card = _savedCards.firstWhere(
+                    (c) => c['id'] == _selectedCardId,
+                  );
+                  paymentMethodText =
+                      'Tarjeta ${card['type']?.toString().toUpperCase()} terminada en ${card['last4']}';
+                }
               } else if (_selectedPaymentMethod == 'yape') {
                 paymentMethodText = 'Yape';
               } else {
@@ -827,7 +1062,8 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
                 MaterialPageRoute(
                   builder: (context) => OrderTrackingScreen(
                     product: widget.product,
-                    orderCode: 'CUP-2024-001234',
+                    orderCode:
+                        'CUP-2024-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
                     paymentMethod: paymentMethodText,
                     shippingCost: 15.00,
                     deliveryAddress: 'Av. Larco 1234, Miraflores',
@@ -843,7 +1079,7 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
               ),
             ),
             child: Text(
-              'Confirmar Pago',
+              'Pagar S/ ${_groupPrice.toStringAsFixed(2)}',
               style: TextStyle(
                 fontFamily: 'Plus Jakarta Sans',
                 fontSize: 18,
@@ -856,4 +1092,3 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
     );
   }
 }
-

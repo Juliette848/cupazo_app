@@ -38,26 +38,34 @@ class _HomeScreenState extends State<HomeScreen> {
               // Main Content
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 24),
 
                       // Title Section
-                      _buildTitleSection(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildTitleSection(),
+                      ),
                       const SizedBox(height: 20),
 
-                      // Yellow Promo Banner
+                      // Yellow Promo Banner (Extendido)
                       _buildPromoBanner(),
                       const SizedBox(height: 32),
 
                       // Categories Grid
-                      _buildCategoriesSection(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildCategoriesSection(),
+                      ),
                       const SizedBox(height: 32),
 
                       // Unique Collections Section
-                      _buildCollectionsSection(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildCollectionsSection(),
+                      ),
                       const SizedBox(height: 100), // Space for bottom nav
                     ],
                   ),
@@ -172,6 +180,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPromoBanner() {
     return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: 8,
+      ), // Margen reducido para que sea más ancho
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.primaryYellow,
