@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/theme/colors.dart';
 import '../../domain/models/product.dart';
 import '../../domain/models/group_purchase.dart';
-import '../../data/mock_groups.dart';
+import '../../../../data/repositories/match_group_repository.dart';
+import '../../data/group_mapper.dart';
 import 'group_payment_screen.dart';
+import '../../../../services/supabase_service.dart';
 
 /// Pantalla de detalle de producto con compra en grupo
 class ProductDetailScreen extends StatefulWidget {
@@ -19,37 +21,115 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isFavorite = false;
   String? _selectedSize;
   int _quantity = 1; // Cantidad seleccionada para grupo
-  final List<GroupPurchase> _activeGroups = [];
+  List<GroupPurchase> _activeGroups = [];
+  bool _isLoadingGroups = true;
+  final _groupRepository = MatchGroupRepository();
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.product.isFavorite;
     _selectedSize = 'M'; // Talla por defecto
-    _activeGroups.addAll(MockGroups.getActiveGroups(widget.product.id));
+    _loadGroups();
+  }
+
+  Future<void> _loadGroups() async {
+    try {
+      final currentUser = SupabaseService.client.auth.currentUser;
+      final currentUserId = currentUser?.id;
+      // Intenta obtener el avatar de los metadatos del usuario (Google, etc.)
+      final currentUserAvatarUrl =
+          currentUser?.userMetadata?['avatar_url'] as String?;
+
+      print('Loading groups for deal: ${widget.product.id}');
+
+      final groupsData = await _groupRepository.getGroupsWithMembersForDeal(
+        widget.product.id,
+      );
+
+      print('Groups fetched: ${groupsData.length}');
+
+      final groups = GroupMapper.fromSupabaseList(
+        groupsData,
+        widget.product.groupPrice3,
+        currentUserId: currentUserId,
+        currentUserAvatarUrl: currentUserAvatarUrl,
+      );
+
+      if (mounted) {
+        setState(() {
+          _activeGroups = groups;
+          _isLoadingGroups = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingGroups = false;
+        });
+        // Opcional: mostrar error
+        print('Error loading groups: $e');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error cargando grupos: $e')));
+      }
+    }
   }
 
   void _joinGroup(GroupPurchase group) {
-    // Navegar a la pantalla de pago
+    // Navegar a la pantalla de pago para unirse a un grupo
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => GroupPaymentScreen(
           product: widget.product,
-          group: group,
+          group: group, // Pasamos el grupo al que nos unimos
           selectedSize: _selectedSize,
+          dealId: widget.product.id,
+          isJoining: true,
+        ),
+      ),
+    ).then((result) {
+      if (result == true) {
+        _loadGroups();
+      }
+    });
+  }
+
+  Future<void> _startNewGroup() async {
+    // Navegar a la pantalla de pago para crear un nuevo grupo
+    // Creamos un objeto GroupPurchase temporal para la vista
+    final newGroup = GroupPurchase(
+      id: 'new',
+      creatorName: 'Tú',
+      creatorInitials: 'Tú',
+      creatorAvatarUrl: '',
+      currentMembers: 1,
+      requiredMembers: 2, // Debería venir del deal type (ej: 2 para 2x1)
+      groupPrice: widget.product.groupPrice3,
+      createdAt: DateTime.now(),
+      isCurrentUserMember: true,
+    );
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GroupPaymentScreen(
+          product: widget.product,
+          group: newGroup,
+          selectedSize: _selectedSize,
+          dealId: widget.product.id,
+          isJoining: false, // Es nuevo grupo
         ),
       ),
     );
-  }
 
-  void _startNewGroup() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Has iniciado un nuevo grupo de compra'),
-        backgroundColor: AppColors.statusSuccess,
-      ),
-    );
+    if (result == true && mounted) {
+      // Dar un pequeño delay para asegurar que Supabase haya indexado el nuevo grupo
+      // Aumentamos el delay a 1 segundo para mayor seguridad
+      await Future.delayed(const Duration(seconds: 1));
+      _loadGroups();
+    }
   }
 
   @override
@@ -464,7 +544,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ..._activeGroups.map((group) => _buildGroupCard(group)),
+          if (_isLoadingGroups)
+            const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryYellow),
+            )
+          else if (_activeGroups.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Text(
+                'No hay grupos activos. ¡Sé el primero en crear uno!',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            ..._activeGroups.map((group) => _buildGroupCard(group)),
           const SizedBox(height: 16),
 
           // Start My Own Group Button
@@ -517,18 +613,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             decoration: BoxDecoration(
               color: AppColors.deepBlack,
               shape: BoxShape.circle,
+              image: group.creatorAvatarUrl.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(group.creatorAvatarUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: Center(
-              child: Text(
-                group.creatorInitials,
-                style: const TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+            child: group.creatorAvatarUrl.isNotEmpty
+                ? null
+                : Center(
+                    child: Text(
+                      group.creatorInitials,
+                      style: const TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           // Group Info
@@ -537,7 +641,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Grupo de ${group.creatorName}',
+                  group.isCurrentUserMember
+                      ? 'Tu grupo'
+                      : 'Grupo de ${group.creatorName}',
                   style: TextStyle(
                     fontFamily: 'Plus Jakarta Sans',
                     fontSize: 14,
@@ -558,25 +664,54 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
           // Join Button
-          ElevatedButton(
-            onPressed: group.isComplete ? null : () => _joinGroup(group),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryYellow, // Fondo Amarillo
-              foregroundColor: AppColors.deepBlack, // Texto Negro
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
+          if (group.isCurrentUserMember)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check, size: 16, color: Colors.green),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Unido',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ElevatedButton(
+              onPressed: group.isComplete ? null : () => _joinGroup(group),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryYellow, // Fondo Amarillo
+                foregroundColor: AppColors.deepBlack, // Texto Negro
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                '¡Unirme!',
+                style: TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            child: Text(
-              '¡Unirme!',
-              style: TextStyle(
-                fontFamily: 'Plus Jakarta Sans',
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
         ],
       ),
     );

@@ -2,19 +2,26 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/theme/colors.dart';
 import '../../domain/models/product.dart';
 import '../../domain/models/group_purchase.dart';
-import 'order_tracking_screen.dart';
+
+import '../../../../data/repositories/match_group_repository.dart';
+import '../../../../data/repositories/match_group_member_repository.dart';
+import '../../../../services/supabase_service.dart';
 
 /// Pantalla de pago de grupo
 class GroupPaymentScreen extends StatefulWidget {
   final Product product;
   final GroupPurchase group;
   final String? selectedSize;
+  final String dealId;
+  final bool isJoining;
 
   const GroupPaymentScreen({
     super.key,
     required this.product,
     required this.group,
     this.selectedSize,
+    required this.dealId,
+    required this.isJoining,
   });
 
   @override
@@ -38,6 +45,10 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
     {'id': '1', 'type': 'visa', 'last4': '4567', 'expiry': '12/25'},
     {'id': '2', 'type': 'mastercard', 'last4': '8901', 'expiry': '08/26'},
   ];
+
+  bool _isProcessing = false;
+  final _groupRepository = MatchGroupRepository();
+  final _memberRepository = MatchGroupMemberRepository();
 
   @override
   void initState() {
@@ -999,78 +1010,112 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              // Validar que se haya seleccionado un método de pago
-              if (_selectedPaymentMethod == 'card') {
-                if (!_isAddingNewCard && _selectedCardId == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Por favor selecciona una tarjeta'),
-                      backgroundColor: AppColors.statusError,
-                    ),
-                  );
-                  return;
-                } else if (_isAddingNewCard) {
-                  if (_cardNumberController.text.isEmpty ||
-                      _expiryController.text.isEmpty ||
-                      _cvvController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Por favor completa los datos de la tarjeta',
+            onPressed: _isProcessing
+                ? null
+                : () async {
+                    // Validar que se haya seleccionado un método de pago
+                    if (_selectedPaymentMethod == 'card') {
+                      if (!_isAddingNewCard && _selectedCardId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Por favor selecciona una tarjeta'),
+                            backgroundColor: AppColors.statusError,
+                          ),
+                        );
+                        return;
+                      } else if (_isAddingNewCard) {
+                        if (_cardNumberController.text.isEmpty ||
+                            _expiryController.text.isEmpty ||
+                            _cvvController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Por favor completa los datos de la tarjeta',
+                              ),
+                              backgroundColor: AppColors.statusError,
+                            ),
+                          );
+                          return;
+                        }
+                      }
+                    }
+
+                    if ((_selectedPaymentMethod == 'yape' ||
+                            _selectedPaymentMethod == 'plin') &&
+                        _phoneController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Por favor ingresa tu número de celular',
+                          ),
+                          backgroundColor: AppColors.statusError,
                         ),
-                        backgroundColor: AppColors.statusError,
-                      ),
-                    );
-                    return;
-                  }
-                }
-              }
+                      );
+                      return;
+                    }
 
-              if ((_selectedPaymentMethod == 'yape' ||
-                      _selectedPaymentMethod == 'plin') &&
-                  _phoneController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Por favor ingresa tu número de celular'),
-                    backgroundColor: AppColors.statusError,
-                  ),
-                );
-                return;
-              }
+                    setState(() {
+                      _isProcessing = true;
+                    });
 
-              // Navegar a la pantalla de seguimiento de pedido
-              String paymentMethodText;
-              if (_selectedPaymentMethod == 'card') {
-                if (_isAddingNewCard) {
-                  paymentMethodText =
-                      'Tarjeta terminada en ${_cardNumberController.text.length > 4 ? _cardNumberController.text.substring(_cardNumberController.text.length - 4) : '****'}';
-                } else {
-                  final card = _savedCards.firstWhere(
-                    (c) => c['id'] == _selectedCardId,
-                  );
-                  paymentMethodText =
-                      'Tarjeta ${card['type']?.toString().toUpperCase()} terminada en ${card['last4']}';
-                }
-              } else if (_selectedPaymentMethod == 'yape') {
-                paymentMethodText = 'Yape';
-              } else {
-                paymentMethodText = 'Plin';
-              }
+                    try {
+                      final userId =
+                          SupabaseService.client.auth.currentUser?.id;
+                      if (userId == null) {
+                        throw 'Usuario no autenticado';
+                      }
 
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => OrderTrackingScreen(
-                    product: widget.product,
-                    orderCode:
-                        'CUP-2024-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-                    paymentMethod: paymentMethodText,
-                    shippingCost: 15.00,
-                    deliveryAddress: 'Av. Larco 1234, Miraflores',
-                  ),
-                ),
-              );
-            },
+                      String groupId;
+
+                      if (widget.isJoining) {
+                        groupId = widget.group.id;
+                        // Verificar si el grupo aún tiene espacio (opcional, ya se valida en UI)
+                      } else {
+                        // Crear nuevo grupo
+                        final newGroup = await _groupRepository.createGroup(
+                          dealId: widget.dealId,
+                          maxGroupSize: widget.group.requiredMembers,
+                          status: 'open',
+                        );
+                        groupId = newGroup.id;
+                      }
+
+                      // Agregar miembro al grupo
+                      await _memberRepository.addMemberToGroup(
+                        groupId: groupId,
+                        userId: userId,
+                        role: widget.isJoining ? 'member' : 'creator',
+                        deliveryAddress: 'Av. Larco 1234, Miraflores', // Mock
+                        deliveryLat: -12.12, // Mock
+                        deliveryLng: -77.03, // Mock
+                      );
+
+                      // Navegar de regreso a la pantalla de detalle del producto
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '¡Grupo creado exitosamente! Esperando a otros miembros.',
+                            ),
+                            backgroundColor: AppColors.statusSuccess,
+                          ),
+                        );
+                        Navigator.of(context).pop(true);
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        setState(() {
+                          _isProcessing = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error al procesar el pago: $e'),
+                            backgroundColor: AppColors.statusError,
+                          ),
+                        );
+                      }
+                    }
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.statusSuccess,
               foregroundColor: Colors.white,
@@ -1078,17 +1123,27 @@ class _GroupPaymentScreenState extends State<GroupPaymentScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text(
-              'Pagar S/ ${_groupPrice.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontFamily: 'Plus Jakarta Sans',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: _isProcessing
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    'Pagar S/ ${_groupPrice.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
         ),
       ),
     );
   }
 }
+

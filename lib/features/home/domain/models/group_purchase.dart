@@ -8,6 +8,7 @@ class GroupPurchase {
   final int requiredMembers;
   final double groupPrice;
   final DateTime createdAt;
+  final bool isCurrentUserMember;
 
   GroupPurchase({
     required this.id,
@@ -18,9 +19,9 @@ class GroupPurchase {
     required this.requiredMembers,
     required this.groupPrice,
     required this.createdAt,
+    this.isCurrentUserMember = false,
   });
 
   int get missingMembers => requiredMembers - currentMembers;
   bool get isComplete => currentMembers >= requiredMembers;
 }
-

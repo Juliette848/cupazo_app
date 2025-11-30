@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/theme/colors.dart';
+import '../../profile/presentation/pages/profile_screen.dart';
 import 'pages/category_products_screen.dart';
 
 /// Pantalla principal de Cupazo
@@ -144,7 +145,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: IconButton(
               icon: Icon(Icons.person_outline, color: AppColors.deepBlack),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -569,6 +577,12 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+          if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            );
+          }
         },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primaryYellow,

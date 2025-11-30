@@ -16,11 +16,13 @@ class MatchGroupModel {
 
   factory MatchGroupModel.fromJson(Map<String, dynamic> json) {
     return MatchGroupModel(
-      id: json['id'] as String,
-      dealId: json['deal_id'] as String,
-      maxGroupSize: json['max_group_size'] as int,
-      status: json['status'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      id: json['id'] as String? ?? '',
+      dealId: json['deal_id'] as String? ?? '',
+      maxGroupSize: (json['max_group_size'] as num?)?.toInt() ?? 2,
+      status: json['status'] as String? ?? 'unknown',
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
     );
   }
 
@@ -34,4 +36,3 @@ class MatchGroupModel {
     };
   }
 }
-

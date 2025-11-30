@@ -24,19 +24,17 @@ class MatchGroupMemberModel {
 
   factory MatchGroupMemberModel.fromJson(Map<String, dynamic> json) {
     return MatchGroupMemberModel(
-      id: json['id'] as String,
-      groupId: json['group_id'] as String,
-      userId: json['user_id'] as String,
-      role: json['role'] as String,
-      joinedAt: DateTime.parse(json['joined_at'] as String),
+      id: json['id'] as String? ?? '',
+      groupId: json['group_id'] as String? ?? '',
+      userId: json['user_id'] as String? ?? '',
+      role: json['role'] as String? ?? 'member',
+      joinedAt: json['joined_at'] != null
+          ? DateTime.parse(json['joined_at'] as String)
+          : DateTime.now(),
       deliveryAddress: json['delivery_address'] as String?,
-      deliveryLat: json['delivery_lat'] != null
-          ? (json['delivery_lat'] as num).toDouble()
-          : null,
-      deliveryLng: json['delivery_lng'] != null
-          ? (json['delivery_lng'] as num).toDouble()
-          : null,
-      status: json['status'] as String,
+      deliveryLat: (json['delivery_lat'] as num?)?.toDouble(),
+      deliveryLng: (json['delivery_lng'] as num?)?.toDouble(),
+      status: json['status'] as String? ?? 'active',
     );
   }
 
@@ -54,4 +52,3 @@ class MatchGroupMemberModel {
     };
   }
 }
-

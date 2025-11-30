@@ -60,6 +60,22 @@ class MatchGroupRepository {
       throw Exception('Error fetching group by id: $e');
     }
   }
+
+  /// Get groups with members info for a deal
+  Future<List<Map<String, dynamic>>> getGroupsWithMembersForDeal(String dealId) async {
+    try {
+      final response = await _supabase
+          .from('match_groups')
+          .select('*, match_group_members(*, users(*))')
+          .eq('deal_id', dealId)
+          .eq('status', 'open') // Only open groups
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw Exception('Error fetching groups with members: $e');
+    }
+  }
 }
 
 // Example usage:
