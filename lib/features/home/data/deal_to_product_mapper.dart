@@ -5,18 +5,23 @@ import '../../../data/models/deal_model.dart';
 class DealToProductMapper {
   /// Convert a DealModel to a Product
   static Product toProduct(DealModel deal) {
-    // Calculate discount percentage (assuming original price is 20% higher)
-    final originalPrice = deal.price * 1.2;
+    // Use regular_price from DB if available, otherwise estimate it
+    final double regularPrice = deal.regularPrice > 0 
+        ? deal.regularPrice 
+        : deal.price * 1.2; // Fallback estimate if regular_price is missing
+        
+    // The deal price is the group offer price
+    final double offerPrice = deal.price;
+
     final discountPercentage =
-        ((originalPrice - deal.price) / originalPrice * 100).round();
+        ((regularPrice - offerPrice) / regularPrice * 100).round();
 
     // Calculate group prices based on max group size
     // If maxGroupSize >= 6, use that for groupPrice6Plus
-    // Otherwise, calculate a reasonable group price
-    final groupPrice3 = deal.price * 0.85; // 15% discount for 3 people
+    final groupPrice3 = offerPrice; // This is the main offer price
     final groupPrice6Plus = deal.maxGroupSize >= 6
-        ? deal.price * 0.75 // 25% discount for 6+ people
-        : deal.price * 0.80; // 20% discount for smaller groups
+        ? deal.price * 0.90 // Additional discount for larger groups if logic exists
+        : deal.price;
 
     // Extract brand from title if it contains a dash or colon
     // Otherwise use a default or extract from title
@@ -42,13 +47,13 @@ class DealToProductMapper {
       id: deal.id,
       brand: brand,
       name: name,
-      originalPrice: originalPrice,
-      currentPrice: deal.price,
+      originalPrice: regularPrice, // Precio tachado
+      currentPrice: regularPrice,  // Precio individual (venta normal)
       discountPercentage: discountPercentage,
       imageUrl: deal.imageUrl.isNotEmpty
           ? deal.imageUrl
           : 'https://via.placeholder.com/400?text=${Uri.encodeComponent(deal.title)}',
-      groupPrice3: groupPrice3,
+      groupPrice3: groupPrice3,    // Precio oferta grupo
       groupPrice6Plus: groupPrice6Plus,
       interestedCount: 0, // Will be updated from deal_interests if needed
       category: deal.category,
@@ -61,4 +66,3 @@ class DealToProductMapper {
     return deals.map((deal) => toProduct(deal)).toList();
   }
 }
-

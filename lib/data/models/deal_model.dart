@@ -7,6 +7,7 @@ class DealModel {
   final String type;
   final int maxGroupSize;
   final double price;
+  final double regularPrice;
   final String category;
   final double locationLat;
   final double locationLng;
@@ -23,6 +24,7 @@ class DealModel {
     required this.type,
     required this.maxGroupSize,
     required this.price,
+    required this.regularPrice,
     required this.category,
     required this.locationLat,
     required this.locationLng,
@@ -41,6 +43,7 @@ class DealModel {
       type: json['type'] as String? ?? '',
       maxGroupSize: json['max_group_size'] as int? ?? 2,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      regularPrice: (json['regular_price'] as num?)?.toDouble() ?? 0.0,
       category: json['category'] as String? ?? '',
       locationLat: (json['location_lat'] as num?)?.toDouble() ?? 0.0,
       locationLng: (json['location_lng'] as num?)?.toDouble() ?? 0.0,
@@ -65,6 +68,7 @@ class DealModel {
       'type': type,
       'max_group_size': maxGroupSize,
       'price': price,
+      'regular_price': regularPrice,
       'category': category,
       'location_lat': locationLat,
       'location_lng': locationLng,
